@@ -1,0 +1,3 @@
+[submodule "w2v2-pro-sm"]
+	path = w2v2-pro-sm
+	url = https://huggingface.co/spoglab/w2v2-pro-sm
