@@ -5,6 +5,12 @@
 2. `git clone --recurse-submodules https://github.com/arxaqapi/vocal-dumpster`
 3. run `uv sync`
 
+## Usage
+
+### Inference
+```sh
+$ uv run infer.py hparams/hparams.yaml
+```
 
 ## Paper/BibTex Citation
 ```bibtex
@@ -16,7 +22,7 @@
 }
 ```
 
-## Contact
-Theo Zhang
+## Acknowledgement
+- https://github.com/jialuli3/speechbrain/tree/ef9038cd076dd2789755f48c0f95955c8570be5a/recipes/BabbleCor
+- https://github.com/spoglab-stanford/w2v2-pro-sm/tree/main/speechbrain/recipes/W2V2-LL4300-Pro-SM
 
-E-mail: theo.zhang@ucla.edu
