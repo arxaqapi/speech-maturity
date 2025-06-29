@@ -11,6 +11,7 @@
 ```sh
 $ uv run scripts/infer.py hparams/hparams.yaml
 ```
+Or even better, use the `run.sh` script that fixes a lot of problems.
 
 ## Paper/BibTex Citation
 ```bibtex
