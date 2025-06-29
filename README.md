@@ -9,7 +9,7 @@
 
 ### Inference
 ```sh
-$ uv run infer.py hparams/hparams.yaml
+$ uv run scripts/infer.py hparams/hparams.yaml
 ```
 
 ## Paper/BibTex Citation
