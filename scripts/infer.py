@@ -1,20 +1,18 @@
-#!/usr/bin/env python3
-
-import os
 import sys
-import speechbrain as sb
-from hyperpyyaml import load_hyperpyyaml
-import torch
+
+import librosa
 import numpy as np
 import pandas as pd
-import librosa
+import speechbrain as sb
+import torch
+from hyperpyyaml import load_hyperpyyaml
 from speechbrain.lobes.models.fairseq_wav2vec import FairseqWav2Vec2
+
 
 class EmoIdBrain(sb.Brain):
     def compute_forward(self, batch, stage):
-        """Computation pipeline based on a encoder + emotion classifier.
-        """
-        
+        """Computation pipeline based on a encoder + emotion classifier."""
+
         batch = batch.to(self.device)
         wavs_chi, lens_chi = batch.sig_chi
 
@@ -22,50 +20,56 @@ class EmoIdBrain(sb.Brain):
         # last dim will be used for AdaptativeAVG pool
 
         asr_features = self.get_asr_features(wavs_chi)
-        outputs_chi = self.get_wa_outputs(outputs_chi,self.modules.weighted_average_chi, mean_pool_first=self.hparams.mean_pool_first_chi, lens = lens_chi)
+        outputs_chi = self.get_wa_outputs(
+            outputs_chi,
+            self.modules.weighted_average_chi,
+            mean_pool_first=self.hparams.mean_pool_first_chi,
+            lens=lens_chi,
+        )
         if self.hparams.combine_asr == "concat":
             outputs_chi = torch.cat((outputs_chi, asr_features), dim=1)
         else:
-            outputs_chi = (1-self.hparams.combine_factor_asr)*outputs_chi + self.hparams.combine_factor_asr * asr_features
+            outputs_chi = (
+                1 - self.hparams.combine_factor_asr
+            ) * outputs_chi + self.hparams.combine_factor_asr * asr_features
 
         outputs_chi = self.modules.output_mlp_chi(self.modules.dnn_chi(outputs_chi))
 
         return outputs_chi
-    
+
     def get_asr_features(self, wavs, apply_avg=True):
         with torch.no_grad():
             embeddings = self.hparams.wav2vec_asr(wavs)
             if apply_avg:
                 embeddings = self.hparams.avg_pool(embeddings).squeeze_()
         return embeddings
-    
+
     def get_wa_outputs(self, outputs, wa, mean_pool_first=True, lens=None):
         if mean_pool_first:
             avg_outputs = []
             for i in range(len(outputs)):
-                avg_output = self.hparams.avg_pool(outputs[i],lens)
-                avg_output = avg_output.view(avg_output.shape[0],-1)
+                avg_output = self.hparams.avg_pool(outputs[i], lens)
+                avg_output = avg_output.view(avg_output.shape[0], -1)
                 avg_outputs.append(avg_output)
-            outputs = torch.stack(avg_outputs).permute(1,2,0)
+            outputs = torch.stack(avg_outputs).permute(1, 2, 0)
             outputs = wa(outputs)
-        else: #WA first
-            outputs = outputs.permute(1,2,3,0)
-            outputs = wa(outputs) #B,T,D
-            outputs = self.hparams.avg_pool(outputs,lens)
-            outputs = outputs.view(outputs.shape[0],-1)
-    
+        else:  # WA first
+            outputs = outputs.permute(1, 2, 3, 0)
+            outputs = wa(outputs)  # B,T,D
+            outputs = self.hparams.avg_pool(outputs, lens)
+            outputs = outputs.view(outputs.shape[0], -1)
+
         return outputs
 
     def compute_objectives(self, outputs_chi, batch, stage):
-        """Computes the loss using speaker-id as label.
-        """
+        """Computes the loss using speaker-id as label."""
         chi_true = batch.chi_true
 
         """to meet the input form of nll loss"""
         predictions_chi = self.hparams.log_softmax(outputs_chi)
 
         loss = self.hparams.compute_cost(predictions_chi, chi_true)
-    
+
         if stage != sb.Stage.TRAIN:
             self.error_metrics.append(batch.id, predictions_chi, chi_true)
         return loss
@@ -74,7 +78,7 @@ class EmoIdBrain(sb.Brain):
         """Trains the parameters given a single batch in input"""
         predictions_chi = self.compute_forward(batch, sb.Stage.TRAIN)
         loss = self.compute_objectives(predictions_chi, batch, sb.Stage.TRAIN)
-        
+
         loss.backward()
         if self.check_gradients(loss):
             self.wav2vec2_optimizer.step()
@@ -85,7 +89,7 @@ class EmoIdBrain(sb.Brain):
 
         return loss.detach()
 
-    def evaluate_batch(self,batch,stage):
+    def evaluate_batch(self, batch, stage):
         predictions_chi = self.compute_forward(batch, stage)
         loss = self.compute_objectives(predictions_chi, batch, stage)
 
@@ -98,16 +102,27 @@ class EmoIdBrain(sb.Brain):
         # Store predictions
         batch_ids = batch.id  # Get batch sample IDs
         true_labels = batch.chi_true  # Get true labels
-
+        # NOTE - index to label name
+        inv_dict_map = {
+            1: "Non-Canonical",
+            2: "Canonical",
+            3: "Laughing",
+            4: "Crying",
+            0: "Junk",
+        }
         # Store as a dictionary for easy access later
         for i, sample_id in enumerate(batch_ids):
-            self.predictions_list.append({
-                "id": sample_id,
-                "true_label": true_labels[i].item(),
-                "predicted_label": predicted_labels[i].item(),
-                "logits": predictions_chi[i].tolist(),
-                "probabilities": probabilities[i].tolist(),
-            })
+            pred_lab = predicted_labels[i].item()
+            self.predictions_list.append(
+                {
+                    "id": sample_id,
+                    "true_label": true_labels[i].item(),
+                    "predicted_label": pred_lab,
+                    "predictio_class_name": inv_dict_map[pred_lab],
+                    "logits": predictions_chi[i].tolist(),
+                    "probabilities": probabilities[i].tolist(),
+                }
+            )
 
         return loss.detach().cpu()
 
@@ -152,14 +167,17 @@ class EmoIdBrain(sb.Brain):
         else:
             stats = {
                 "loss": stage_loss,
-                "error_rate_f1": 1-self.error_metrics.summarize("macro_f1"),
-                "error_rate_UAR": 1-self.error_metrics.summarize("UAR"),
-                "error_rate_f1_UAR": 1-(0.5*self.error_metrics.summarize("macro_f1")+0.5*self.error_metrics.summarize("UAR")),
+                "error_rate_f1": 1 - self.error_metrics.summarize("macro_f1"),
+                "error_rate_UAR": 1 - self.error_metrics.summarize("UAR"),
+                "error_rate_f1_UAR": 1
+                - (
+                    0.5 * self.error_metrics.summarize("macro_f1")
+                    + 0.5 * self.error_metrics.summarize("UAR")
+                ),
             }
 
         # At the end of validation...
         if stage == sb.Stage.VALID:
-
             old_lr, new_lr = self.hparams.lr_annealing(stats["error_rate_UAR"])
             sb.nnet.schedulers.update_learning_rate(self.optimizer, new_lr)
 
@@ -180,8 +198,7 @@ class EmoIdBrain(sb.Brain):
 
             # Save the current checkpoint and delete previous checkpoints,
             self.checkpointer.save_and_keep_only(
-                meta=stats, 
-                min_keys=["error_rate_UAR"]
+                meta=stats, min_keys=["error_rate_UAR"]
             )
 
             with open(self.hparams.train_log, "a") as w:
@@ -197,8 +214,10 @@ class EmoIdBrain(sb.Brain):
 
             # Print predictions or save to file
             predictions_df = pd.DataFrame(self.predictions_list)
-            #CHANGE
-            predictions_df.to_csv("/path/to/predictions.csv", index=False)
+            # CHANGE
+            predictions_df.to_csv(
+                f"{self.hparams.output_folder}/predictions.csv", index=False
+            )
 
             print(predictions_df.head())
 
@@ -210,10 +229,9 @@ class EmoIdBrain(sb.Brain):
         self.optimizer = self.hparams.opt_class(self.hparams.model.parameters())
 
         if self.checkpointer is not None:
-            self.checkpointer.add_recoverable(
-                "wav2vec2_opt", self.wav2vec2_optimizer
-            )
+            self.checkpointer.add_recoverable("wav2vec2_opt", self.wav2vec2_optimizer)
             self.checkpointer.add_recoverable("optimizer", self.optimizer)
+
 
 def dataio_prep(hparams):
     """This function prepares the datasets to be used in the brain class.
@@ -239,18 +257,26 @@ def dataio_prep(hparams):
     def audio_pipeline_chi(wav):
         """Load the signal, and pass it and its length to the corruption class.
         This is done on the CPU in the `collate_fn`."""
-        data,rate=librosa.load(wav,sr=16000,mono=True)# downsample all the audio to 16kHz
-        if len(data)/rate<0.07:
-            pad_zeros_num = int(0.07*rate)-len(data)
+        data, rate = librosa.load(
+            wav, sr=16000, mono=True
+        )  # downsample all the audio to 16kHz
+        if len(data) / rate < 0.07:
+            pad_zeros_num = int(0.07 * rate) - len(data)
             pad_zeros = np.zeros(pad_zeros_num)
-            data=np.r_[data,pad_zeros]
-        data=torch.from_numpy(data).float()
+            data = np.r_[data, pad_zeros]
+        data = torch.from_numpy(data).float()
         return data
 
     @sb.utils.data_pipeline.takes("label")
     @sb.utils.data_pipeline.provides("chi_true")
     def label_pipeline_chi(input):
-        dict_map={"Non-Canonical":1,"Canonical":2,"Laughing":3,"Crying":4,"Junk":0}
+        dict_map = {
+            "Non-Canonical": 1,
+            "Canonical": 2,
+            "Laughing": 3,
+            "Crying": 4,
+            "Junk": 0,
+        }
         if input in dict_map:
             yield dict_map[input]
         yield 0
@@ -269,21 +295,16 @@ def dataio_prep(hparams):
     return datasets
 
 
-# RECIPE BEGINS!
 if __name__ == "__main__":
-
     # Reading command line arguments.
     hparams_file, run_opts, overrides = sb.parse_arguments(sys.argv[1:])
-    #CHANGE if you are using GPU
-    run_opts['device'] = 'cpu'
-
-    # Initialize ddp (useful only for multi-GPU DDP training).
-    sb.utils.distributed.ddp_init_group(run_opts)
+    # CHANGE if you are using GPU
+    run_opts["device"] = "cpu"  # cpu, gpu, mps
 
     # Load hyperparameters file with command-line overrides.
     with open(hparams_file) as fin:
         hparams = load_hyperpyyaml(fin, overrides)
-    
+
     # Create experiment directory
     sb.create_experiment_directory(
         experiment_directory=hparams["output_folder"],
@@ -294,7 +315,7 @@ if __name__ == "__main__":
     # Create dataset objects "train", "valid", and "test".
     datasets = dataio_prep(hparams)
 
-    hparams["wav2vec2"] = hparams["wav2vec2"].to(run_opts["device"])
+    # hparams["wav2vec2"] = hparams["wav2vec2"].to(run_opts["device"])
 
     # Initialize the Brain object to prepare for mask training.
     emo_id_brain = EmoIdBrain(
@@ -304,24 +325,10 @@ if __name__ == "__main__":
         run_opts=run_opts,
         checkpointer=hparams["checkpointer"],
     )
+    emo_id_brain.checkpointer.recover_if_possible()
+    emo_id_brain.modules.eval()
 
-    hparams["pretrainer"].load_collected(device=run_opts["device"])
-    hparams["wav2vec_asr"].eval()
-    hparams["wav2vec_asr"] = hparams["wav2vec_asr"].to(run_opts["device"])
-
-    # The `fit()` method iterates the training loop, calling the methods
-    # necessary to update the parameters of the model. Since all objects
-    # with changing state are managed by the Checkpointer, training can be
-    # stopped at any point, and will be resumed on next call.
-    emo_id_brain.fit(
-        epoch_counter=emo_id_brain.hparams.epoch_counter,
-        train_set=datasets["train"],
-        valid_set=datasets["valid"],
-        train_loader_kwargs=hparams["dataloader_options"],
-        valid_loader_kwargs=hparams["valid_dataloader_options"],
-    )
     # Load the best checkpoint for evaluation
-
     test_stats = emo_id_brain.evaluate(
         test_set=datasets["test"],
         min_key="error_rate_UAR",
