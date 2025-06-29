@@ -2,7 +2,7 @@
 
 ## Installation Steps
 1. ensure git-lfs is installed
-2. `git clone --recurse-submodules https://github.com/arxaqapi/vocal-dumpster`
+2. `git clone --recurse-submodules https://github.com/arxaqapi/speech-maturity`
 3. run `uv sync`
 
 ## Usage
