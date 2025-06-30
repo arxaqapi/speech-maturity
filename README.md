@@ -1,17 +1,39 @@
 # Speech Maturity Classifier
 
+## Requirements
+This project relies on [uv](https://github.com/astral-sh/uv) to run and handle dependencies correctly, ensure you have it installed.
+
+You would also need [git-lfs](https://git-lfs.com/) installed so that the submodules large files are correctly downloaded.
+
 ## Installation Steps
-1. ensure git-lfs is installed
-2. `git clone --recurse-submodules https://github.com/arxaqapi/speech-maturity`
-3. run `uv sync`
+Clone the repo:
+```bash
+$ git clone --recurse-submodules https://github.com/arxaqapi/speech-maturity
+```
+
+Install all locked dependencies:
+```bash
+$ uv sync
+```
+
 
 ## Usage
 
 ### Inference
+The recommended way of using the vocal maturity classifier for inference is to use the `run.sh` script that handles most of the heavy lifting.
+```sh
+$ sh run.sh
+```
+
+You could also have a more fine-grained control on how to run it by directly invoking the `infer.py` script, make sure that the hyper-parameters are correctly set in the `hparams.yaml` file.
 ```sh
 $ uv run scripts/infer.py hparams/hparams.yaml
 ```
-Or even better, use the `run.sh` script that fixes a lot of problems.
+
+### Audio preparation
+The `run.sh` script awaits the audio files to be in the folder defined by the `audios_path` variable, by default set to `audio`.
+To prepare the json input file, `run.sh` automatically runs `scripts/gen_json.py`.
+
 
 ## Paper/BibTex Citation
 ```bibtex
