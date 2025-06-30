@@ -1121,7 +1121,7 @@ requires-dist = [
     { name = "fairseq", git = "https://github.com/Tps-F/fairseq.git?rev=ff08af2" },
     { name = "librosa", specifier = "==0.11.0" },
     { name = "pandas", specifier = "==2.3.0" },
-    { name = "speechbrain", git = "ssh://git@github.com/arxaqapi/speechbrain" },
+    { name = "speechbrain", git = "https://github.com/arxaqapi/speechbrain.git" },
     { name = "torch", specifier = "==2.6" },
     { name = "transformers", specifier = "==4.53.0" },
 ]
@@ -1129,7 +1129,7 @@ requires-dist = [
 [[package]]
 name = "speechbrain"
 version = "0.5.13"
-source = { git = "ssh://git@github.com/arxaqapi/speechbrain#98eafaa3b2e41cdab4ccd4d73cd7bf2a233db3ef" }
+source = { git = "https://github.com/arxaqapi/speechbrain.git#98eafaa3b2e41cdab4ccd4d73cd7bf2a233db3ef" }
 dependencies = [
     { name = "black" },
     { name = "click" },

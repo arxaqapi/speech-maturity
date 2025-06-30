@@ -14,5 +14,5 @@ dependencies = [
 ]
 
 [tool.uv.sources]
-speechbrain = { git = "ssh://git@github.com/arxaqapi/speechbrain" }
+speechbrain = { git = "https://github.com/arxaqapi/speechbrain.git" }
 fairseq = { git = "https://github.com/Tps-F/fairseq.git", rev = "ff08af2" }
