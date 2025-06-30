@@ -8,9 +8,8 @@ output_folder=debug_out
 # NOTE - Prepare output folder
 mkdir -p $output_folder/myst_checkpoints
 target_path=$(realpath w2v2-pro-sm)
-link_path="$(realpath)/$output_folder/myst_checkpoints"
-# ln -s "$(realpath w2v2-pro-sm)/*." "$(realpath)/$output_folder/myst_checkpoints"
-find $target_path -maxdepth 1 -mindepth 1 -exec ln -vs - "{}" "$link_path" \;
+link_path="$(realpath .)"/$output_folder/myst_checkpoints
+find $target_path -maxdepth 1 -mindepth 1 -exec ln -s "{}" "$link_path" \;
 
 # # NOTE - prepare wav files
 uv run scripts/gen_json.py \
