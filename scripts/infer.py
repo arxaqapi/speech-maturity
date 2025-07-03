@@ -118,7 +118,7 @@ class EmoIdBrain(sb.Brain):
                     "id": sample_id,
                     "true_label": true_labels[i].item(),
                     "predicted_label": pred_lab,
-                    "predictio_class_name": inv_dict_map[pred_lab],
+                    "prediction_class_name": inv_dict_map[pred_lab],
                     "logits": predictions_chi[i].tolist(),
                     "probabilities": probabilities[i].tolist(),
                 }
