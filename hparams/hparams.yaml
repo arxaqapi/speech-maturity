@@ -27,7 +27,7 @@ ckpt_interval_minutes: 15 # save checkpoint every N min
 
 # Training parameters
 number_of_epochs: 10
-batch_size: 16
+batch_size: 64
 lr: 0.00003
 lr_wav2vec2: 0.00001
 mean_pool_first_chi: true

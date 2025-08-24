@@ -296,7 +296,7 @@ if __name__ == "__main__":
     # Reading command line arguments.
     hparams_file, run_opts, overrides = sb.parse_arguments(sys.argv[1:])
     # CHANGE if you are using GPU
-    run_opts["device"] = "cpu"  # cpu, gpu, mps
+    run_opts["device"] = "cuda"  # cpu, cuda, mps
 
     # Load hyperparameters file with command-line overrides.
     with open(hparams_file) as fin:
@@ -312,7 +312,10 @@ if __name__ == "__main__":
     # Create dataset objects "train", "valid", and "test".
     datasets = dataio_prep(hparams)
 
-    # hparams["wav2vec2"] = hparams["wav2vec2"].to(run_opts["device"])
+    hparams["wav2vec2"] = hparams["wav2vec2"].to(run_opts["device"])
+    hparams["wav2vec_asr"] = hparams["wav2vec_asr"].to(run_opts["device"])
+    for module in hparams["modules"].keys():
+        hparams["modules"][module] = hparams["modules"][module].to(run_opts["device"])
 
     # Initialize the Brain object to prepare for mask training.
     emo_id_brain = EmoIdBrain(
@@ -322,6 +325,7 @@ if __name__ == "__main__":
         run_opts=run_opts,
         checkpointer=hparams["checkpointer"],
     )
+    emo_id_brain.modules.to(run_opts["device"])
     emo_id_brain.checkpointer.recover_if_possible()
     emo_id_brain.modules.eval()
 
