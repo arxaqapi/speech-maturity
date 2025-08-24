@@ -1,16 +1,18 @@
 import argparse
 import json
 from pathlib import Path
-from typing import Generator
+from typing import Generator, Literal
 
 
 def log(s: str) -> None:
-    print(f"[log] - {s}")
+    print(f"[log] - {s}", flush=True)
 
 
-def gen_json(audio_paths: list[Path] | Generator[Path, None, None], out_file: Path):
+def gen_json(
+    audio_paths: list[Path] | Generator[Path, None, None], out_file: Path
+) -> int:
     out_file = Path(out_file)
-    d = {}
+    d: dict[str, dict[Literal["wav", "label"] : str]] = {}
     for audio_p in audio_paths:
         log(f"Segment '{audio_p.name}'")
 
@@ -23,6 +25,8 @@ def gen_json(audio_paths: list[Path] | Generator[Path, None, None], out_file: Pa
     out_file.parent.mkdir(parents=True, exist_ok=True)
     with out_file.open("w") as f:
         json.dump(d, f, indent=4)
+
+    return len(d)
 
 
 if __name__ == "__main__":
@@ -50,4 +54,7 @@ if __name__ == "__main__":
         audio_paths = [audio]
 
     log("Starting generation")
-    gen_json(audio_paths, out_file=out_path.with_suffix(".json"))
+    n_audios = gen_json(audio_paths, out_file=out_path.with_suffix(".json"))
+    log(
+        f"Generation ended, file `{out_path.with_suffix('.json').name}` created, found '{n_audios}' audios"
+    )

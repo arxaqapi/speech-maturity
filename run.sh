@@ -1,7 +1,3 @@
-# module purge
-# module load uv
-# module load audio-tools
-
 audios_path=audio
 output_folder=debug_out
 
@@ -21,5 +17,4 @@ uv run scripts/infer.py hparams/hparams.yaml \
     --output_folder=$output_folder \
     --train_annotation="$output_folder/audio_chunks.json" \
     --valid_annotation="$output_folder/audio_chunks.json" \
-    --test_annotation="$output_folder/audio_chunks.json" 
-    #  \ --device="cuda"
+    --test_annotation="$output_folder/audio_chunks.json"
