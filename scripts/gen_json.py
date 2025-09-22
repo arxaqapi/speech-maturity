@@ -52,6 +52,8 @@ if __name__ == "__main__":
     elif audio.is_file() and audio.suffix == ".wav":
         log("is a single file :)")
         audio_paths = [audio]
+    else:
+        raise ValueError(f"{audio=} is not a dir nor file.")
 
     log("Starting generation")
     n_audios = gen_json(audio_paths, out_file=out_path.with_suffix(".json"))
