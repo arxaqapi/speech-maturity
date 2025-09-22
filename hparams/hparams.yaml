@@ -46,19 +46,19 @@ encoder_dim: 1536 # hidden dimension after combination module
 dataloader_options:
     batch_size: !ref <batch_size>
     shuffle: True
-    num_workers: 0  # 2 on linux but 0 works on windows
+    num_workers: 8  # 2 on linux but 0 works on windows
     drop_last: True
 
 valid_dataloader_options:
     batch_size: !ref <batch_size>
     shuffle: False
-    num_workers: 0  # 2 on linux but 0 works on windows
+    num_workers: 8  # 2 on linux but 0 works on windows
     drop_last: True
 
 test_dataloader_options:
     batch_size: !ref <batch_size>
     shuffle: False
-    num_workers: 0  # 2 on linux but 0 works on windows
+    num_workers: 8  # 2 on linux but 0 works on windows
     drop_last: True
 
 wav2vec2_hub: "facebook/wav2vec2-base"
